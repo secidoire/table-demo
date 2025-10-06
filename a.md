@@ -1,57 +1,130 @@
-# Playwright CSSセレクタ チートシート
+# Playwright CSSセレクタ チートシート（HTML例付き）
 
 ## 📌 セレクタ選択の優先順位
 
 ### 第1階層：ユーザー指向のロケータ（最優先）
 
+#### ロールベースセレクタ
+
+```html
+<!-- HTML -->
+<button type="submit">ログイン</button>
+<input type="checkbox" id="remember" />
+<label for="remember">記憶する</label>
+<a href="/about">会社概要</a>
+<h1>ダッシュボード</h1>
+```
+
 ```javascript
-// ロールベース：インタラクティブ要素に最適
+// Playwright
 await page.getByRole('button', { name: 'ログイン' }).click();
 await page.getByRole('checkbox', { name: '記憶する' }).check();
+await page.getByRole('link', { name: '会社概要' }).click();
+await page.getByRole('heading', { name: 'ダッシュボード', level: 1 }).isVisible();
+```
 
-// ラベルベース：フォームコントロールに最適
+#### ラベルベースセレクタ
+
+```html
+<!-- HTML -->
+<label for="email">メールアドレス</label>
+<input type="email" id="email" />
+
+<label>
+  パスワード
+  <input type="password" />
+</label>
+```
+
+```javascript
+// Playwright
 await page.getByLabel('メールアドレス').fill('test@example.com');
-await page.getByLabel('パスワード').fill('secret');
+await page.getByLabel('パスワード').fill('secret123');
+```
 
-// テキストベース：非インタラクティブコンテンツ用
+#### テキストベースセレクタ
+
+```html
+<!-- HTML -->
+<p>ようこそ、山田様</p>
+<div>現在のステータス: <span>アクティブ</span></div>
+<button>ログアウト</button>
+```
+
+```javascript
+// Playwright
 await expect(page.getByText('ようこそ、山田様')).toBeVisible();
+await page.getByText('アクティブ').isVisible();
+await page.getByText('ログアウト', { exact: true }).click();
+```
 
-// プレースホルダーベース
+#### プレースホルダーベースセレクタ
+
+```html
+<!-- HTML -->
+<input type="search" placeholder="検索..." />
+<textarea placeholder="コメントを入力してください"></textarea>
+```
+
+```javascript
+// Playwright
 await page.getByPlaceholder('検索...').fill('playwright');
+await page.getByPlaceholder('コメントを入力してください').fill('テストコメント');
 ```
 
-### 第2階層：テストID（最も安定したフォールバック）
+### 第2階層：テストID
+
+```html
+<!-- HTML -->
+<button data-testid="submit-button">送信</button>
+<div data-testid="error-message">エラーが発生しました</div>
+
+<!-- カスタム属性の場合 -->
+<button data-pw="login-button">ログイン</button>
+```
 
 ```javascript
+// Playwright
 await page.getByTestId('submit-button').click();
+await page.getByTestId('error-message').isVisible();
 
-// playwright.config.ts でカスタム属性を設定
-export default defineConfig({
-  use: { testIdAttribute: 'data-pw' }
-});
-```
-
-### 第3階層：CSS/XPath（最小限の使用）
-
-```javascript
-// CSSセレクタ（XPathは最終手段）
-await page.locator('#submit-btn').click();
+// カスタム属性設定後
+await page.getByTestId('login-button').click();
 ```
 
 ## 🎯 基本的なCSSセレクタ
 
 ### 要素セレクタ
 
+```html
+<!-- HTML -->
+<button>クリック</button>
+<input type="text" value="テキスト" />
+<p>段落テキスト</p>
+<div>コンテナ</div>
+```
+
 ```javascript
-// HTMLタグで選択
+// Playwright
 await page.locator('button').click();
-await page.locator('input').fill('値');
+await page.locator('input').fill('新しい値');
 await page.locator('p').textContent();
+await page.locator('div').first().isVisible();
 ```
 
 ### クラスセレクタ
 
+```html
+<!-- HTML -->
+<button class="submit-button">送信</button>
+<button class="primary large">重要なボタン</button>
+<div class="container active">
+  <p class="text-content">テキスト</p>
+</div>
+```
+
 ```javascript
+// Playwright
 // 単一クラス
 await page.locator('.submit-button').click();
 
@@ -60,408 +133,643 @@ await page.locator('.primary.large').click();
 
 // 要素＋クラス
 await page.locator('button.submit-button').click();
+await page.locator('div.container.active').isVisible();
 ```
 
 ### IDセレクタ
 
-```javascript
-// ID選択
-await page.locator('#username').fill('john');
+```html
+<!-- HTML -->
+<input type="text" id="username" />
+<button id="submit-btn">送信</button>
+<div id="main-content">メインコンテンツ</div>
+```
 
-// 要素＋ID
-await page.locator('input#username').fill('value');
+```javascript
+// Playwright
+await page.locator('#username').fill('john');
+await page.locator('#submit-btn').click();
+await page.locator('div#main-content').isVisible();
 ```
 
 ### 属性セレクタ
 
+```html
+<!-- HTML -->
+<button disabled>無効なボタン</button>
+<input type="password" required />
+<a href="https://example.com">外部リンク</a>
+<a href="document.pdf">PDFファイル</a>
+<div data-test="login-form">
+  <input data-test-id="email-input" />
+</div>
+<span lang="en-US">English</span>
+```
+
 ```javascript
-// [attr] - 属性を持つ
+// Playwright
+// 属性の存在
 await page.locator('[disabled]').count();
+await page.locator('[required]').fill('必須項目');
 
-// [attr="value"] - 完全一致
+// 完全一致
 await page.locator('[type="password"]').fill('secret');
+await page.locator('[data-test="login-form"]').isVisible();
 
-// [attr^="value"] - 前方一致
-await page.locator('[href^="https"]').count();
+// 前方一致
+await page.locator('[href^="https"]').count(); // HTTPSリンク
 
-// [attr$="value"] - 後方一致
-await page.locator('[href$=".pdf"]').count();
+// 後方一致
+await page.locator('[href$=".pdf"]').count(); // PDFファイル
 
-// [attr*="value"] - 部分一致
-await page.locator('[href*="example"]').count();
+// 部分一致
+await page.locator('[href*="example"]').click();
 
-// [attr~="value"] - 単語を含む
-await page.locator('[class~="active"]').click();
-
-// 大文字小文字を無視（iフラグ）
-await page.locator('[type="submit" i]').click();
+// 言語属性（値または値-で始まる）
+await page.locator('[lang|="en"]').count(); // en, en-US, en-GB等
 ```
 
 ## 🔗 CSS結合子
 
 ### 子孫結合子（スペース）
 
-```javascript
-// article内のすべてのspan
-await page.locator('article span').textContent();
+```html
+<!-- HTML -->
+<article>
+  <header>
+    <h2>記事タイトル</h2>
+  </header>
+  <div class="content">
+    <p>段落1</p>
+    <div>
+      <p>ネストされた段落</p>
+    </div>
+  </div>
+</article>
+```
 
-// 複数レベルのネスト
-await page.locator('div.container section p').count();
+```javascript
+// Playwright
+// article内のすべてのp要素（深さ問わず）
+await page.locator('article p').count(); // 2つ
+
+// 複数レベル
+await page.locator('article div p').count(); // 2つ
+await page.locator('article .content p').first().click();
 ```
 
 ### 子結合子（>）
 
-```javascript
-// 直接の子要素のみ
-await page.locator('div > p').click();
+```html
+<!-- HTML -->
+<div class="container">
+  <p>直接の子</p>
+  <div>
+    <p>孫要素（選択されない）</p>
+  </div>
+  <span>直接の子</span>
+</div>
+```
 
-// クラスと組み合わせ
-await page.locator('.container > .content').isVisible();
+```javascript
+// Playwright
+// 直接の子のみ
+await page.locator('.container > p').count(); // 1つのみ
+await page.locator('.container > *').count(); // 3つ（p, div, span）
 ```
 
 ### 隣接兄弟結合子（+）
 
-```javascript
-// 直後の兄弟要素
-await page.locator('div + p').click();
+```html
+<!-- HTML -->
+<div class="header">ヘッダー</div>
+<p>ヘッダー直後の段落</p>
+<p>次の段落</p>
 
-// ラベル + 入力パターン
-await page.locator('label + input').fill('value');
+<label for="name">名前</label>
+<input id="name" type="text" />
+```
+
+```javascript
+// Playwright
+// div直後のp要素
+await page.locator('div.header + p').click(); // "ヘッダー直後の段落"のみ
+
+// ラベル直後の入力フィールド
+await page.locator('label + input').fill('山田太郎');
 ```
 
 ### 一般兄弟結合子（~）
 
+```html
+<!-- HTML -->
+<h2>セクションタイトル</h2>
+<p>段落1</p>
+<div>区切り</div>
+<p>段落2</p>
+<p>段落3</p>
+```
+
 ```javascript
-// 後続のすべての兄弟要素
-await page.locator('h2 ~ p').count();
+// Playwright
+// h2の後のすべてのp要素
+await page.locator('h2 ~ p').count(); // 3つ
+
+// 最初のpの後のすべてのp
+await page.locator('p ~ p').count(); // 2つ
 ```
 
 ## ⚡ Playwright固有の擬似クラス
 
 ### :visible 擬似クラス
 
-```javascript
-// 表示されている要素のみ
-await page.locator('button:visible').click();
+```html
+<!-- HTML -->
+<button>表示ボタン</button>
+<button style="display: none">非表示ボタン</button>
+<button style="visibility: hidden">不可視ボタン</button>
+<button style="opacity: 0">透明ボタン</button>
+```
 
-// モーダル内の表示要素
-await page.locator('.modal:visible').isVisible();
+```javascript
+// Playwright
+await page.locator('button:visible').count(); // 2つ（表示と透明）
+// opacity:0は「表示」扱い、display:noneとvisibility:hiddenは非表示
 ```
 
 ### テキストマッチング擬似クラス
 
+```html
+<!-- HTML -->
+<article>
+  <h2>Playwrightの紹介</h2>
+  <p>Playwrightは自動テストツールです</p>
+</article>
+
+<nav id="nav-bar">
+  <a href="/">ホーム</a>
+  <a href="/about">会社概要</a>
+  <a href="/home">Home</a>
+</nav>
+
+<button>Submit Form</button>
+<button>送信</button>
+```
+
 ```javascript
-// :has-text() - 部分一致（大文字小文字無視）
+// Playwright
+// :has-text() - 部分一致
 await page.locator('article:has-text("Playwright")').click();
 
 // :text() - テキストを含む最小要素
 await page.locator('#nav-bar :text("ホーム")').click();
 
 // :text-is() - 完全一致
-await page.locator('#nav-bar :text-is("ホーム")').click();
+await page.locator('#nav-bar :text-is("ホーム")').click(); // "ホーム"のみ
+await page.locator('#nav-bar :text-is("Home")').click(); // "Home"のみ
 
 // :text-matches() - 正規表現
-await page.locator(':text-matches("ログ\\s*イン", "i")').click();
+await page.locator('button:text-matches("submit|送信", "i")').click();
 ```
 
 ### :has() 擬似クラス
 
-```javascript
-// 特定の要素を含む
-await page.locator('article:has(div.promo)').textContent();
+```html
+<!-- HTML -->
+<article>
+  <h2>商品A</h2>
+  <div class="promo">セール中</div>
+  <button>購入</button>
+</article>
 
-// filter()メソッドと併用
-await page
-  .getByRole('listitem')
-  .filter({ has: page.getByRole('heading', { name: '商品2' }) })
-  .getByRole('button', { name: 'カートに追加' })
-  .click();
+<article>
+  <h2>商品B</h2>
+  <button>購入</button>
+</article>
+
+<ul>
+  <li>
+    <span>アイテム1</span>
+    <button class="delete">削除</button>
+  </li>
+  <li>
+    <span>アイテム2</span>
+  </li>
+</ul>
+```
+
+```javascript
+// Playwright
+// promoクラスを持つdivを含むarticle
+await page.locator('article:has(div.promo)').click();
+
+// 削除ボタンを持つリストアイテム
+await page.locator('li:has(button.delete)').count(); // 1つ
 ```
 
 ### :nth-match() 擬似クラス
 
+```html
+<!-- HTML -->
+<div>
+  <button>購入</button>
+  <p>説明</p>
+  <button>購入</button>
+  <span>価格</span>
+  <button>購入</button>
+</div>
+```
+
 ```javascript
-// n番目の要素を選択（1ベース）
+// Playwright
+// 3番目の「購入」ボタン（ページ全体で）
 await page.locator(':nth-match(:text("購入"), 3)').click();
 ```
 
-### レイアウト擬似クラス（使用注意）
+### レイアウト擬似クラス
 
-```javascript
-// :right-of() - 右側の要素
-await page.locator('input:right-of(:text("パスワード"))').fill('secret');
-
-// :near() - 近くの要素（デフォルト50px）
-await page.locator('button:near(.promo-card)').click();
+```html
+<!-- HTML -->
+<div style="display: flex;">
+  <label>ユーザー名:</label>
+  <input type="text" />
+  <button>確認</button>
+  <button>キャンセル</button>
+</div>
 ```
 
-⚠️ **注意**: レイアウトセレクタは計算コストが高く、1pxのレイアウト変更にも敏感です。
-
-## 🚫 擬似要素（重要な制限）
-
-**擬似要素はPlaywrightではアクセスできません。**
-
 ```javascript
-// ❌ 動作しない
-// await page.locator('div::before').isVisible();
+// Playwright
+// ラベルの右側の入力フィールド
+await page.locator('input:right-of(:text("ユーザー名"))').fill('user123');
 
-// ✅ 回避策：page.evaluate()を使用
-const beforeContent = await page.locator('.my-element').first()
-  .evaluate(el => window.getComputedStyle(el, '::before').content);
+// キャンセルの左側のボタン
+await page.locator('button:left-of(:text("キャンセル"))').click();
 ```
 
 ## 🔍 セレクタの組み合わせとチェイン
 
-### ロケータチェイン（推奨）
+### 複雑なセレクタの組み合わせ
+
+```html
+<!-- HTML -->
+<div class="product-card" data-product-id="123">
+  <h3>商品名</h3>
+  <div class="price">¥1,000</div>
+  <button class="buy-button primary">カートに追加</button>
+</div>
+```
 
 ```javascript
-// コンテキストに基づく選択
+// Playwright
+// 複数の条件を組み合わせ
+await page.locator('.product-card[data-product-id="123"] button.buy-button').click();
+
+// ロケータチェイン（推奨）
 await page
   .locator('.product-card')
+  .filter({ has: page.locator('[data-product-id="123"]') })
   .locator('.buy-button')
   .click();
+```
 
-// getBy*メソッドを使用
+### フィルタリングパターン
+
+```html
+<!-- HTML -->
+<ul>
+  <li>
+    <h4>商品1</h4>
+    <span>在庫あり</span>
+    <button>カートに追加</button>
+  </li>
+  <li>
+    <h4>商品2</h4>
+    <span>在庫なし</span>
+    <button disabled>カートに追加</button>
+  </li>
+  <li>
+    <h4>商品3</h4>
+    <span>在庫あり</span>
+    <button>カートに追加</button>
+  </li>
+</ul>
+```
+
+```javascript
+// Playwright
+// 在庫ありの商品のみ
 await page
   .getByRole('listitem')
-  .filter({ hasText: '商品2' })
+  .filter({ hasText: '在庫あり' })
   .getByRole('button', { name: 'カートに追加' })
+  .first()
   .click();
-```
 
-### フィルタリングメソッド
-
-```javascript
-// テキストでフィルタ
-await page.locator('button').filter({ hasText: '送信' }).click();
-
-// 子要素でフィルタ
+// 商品2を除外
 await page
   .getByRole('listitem')
-  .filter({ has: page.getByRole('heading', { name: '商品2' }) })
-  .click();
+  .filter({ hasNotText: '商品2' })
+  .count(); // 2つ
 ```
 
-### ロケータ演算子
+## 📋 実践的な使用例
+
+### フォーム操作
+
+```html
+<!-- HTML -->
+<form id="registration-form">
+  <div class="form-group">
+    <label for="firstName">名</label>
+    <input type="text" id="firstName" required />
+  </div>
+  
+  <div class="form-group">
+    <label for="lastName">姓</label>
+    <input type="text" id="lastName" required />
+  </div>
+  
+  <div class="form-group">
+    <label for="email">メールアドレス</label>
+    <input type="email" id="email" placeholder="user@example.com" />
+  </div>
+  
+  <div class="form-group">
+    <label for="country">国</label>
+    <select id="country">
+      <option value="">選択してください</option>
+      <option value="jp">日本</option>
+      <option value="us">アメリカ</option>
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <input type="checkbox" id="terms" />
+    <label for="terms">利用規約に同意する</label>
+  </div>
+  
+  <button type="submit" data-testid="submit-form">登録</button>
+</form>
+```
 
 ```javascript
-// and() - 両方の条件
-const button = page.getByRole('button').and(page.getByTitle('購読'));
+// Playwright - フォーム入力
+await page.getByLabel('名').fill('太郎');
+await page.getByLabel('姓').fill('山田');
+await page.getByLabel('メールアドレス').fill('taro@example.com');
+await page.getByLabel('国').selectOption('jp');
+await page.getByLabel('利用規約に同意する').check();
+await page.getByTestId('submit-form').click();
 
-// or() - いずれかの条件
-const newEmail = page.getByRole('button', { name: '新規' });
-const dialog = page.getByText('セキュリティ設定を確認');
-await expect(newEmail.or(dialog).first()).toBeVisible();
-```
-
-## ⚠️ Strictモード：品質保証
-
-Playwrightは**デフォルトでstrictモード**が有効。複数要素にマッチするとエラーになります。
-
-### エラー例と解決方法
-
-```javascript
-// ❌ エラー：複数要素にマッチ
-await page.locator('button').click();
-
-// ✅ 解決策1：より具体的に（推奨）
-await page.getByRole('button', { name: '送信' }).click();
-
-// ✅ 解決策2：コンテキストを追加
-await page.locator('#login-form').getByRole('button').click();
-
-// ⚠️ 解決策3：位置指定（非推奨）
-await page.locator('button').first().click();
-```
-
-## 🐛 デバッグツール
-
-### Playwright Inspector
-
-```bash
-# デバッグモードで起動
-PWDEBUG=1 npx playwright test
-
-# または --debug フラグを使用
-npx playwright test --debug
-```
-
-**主な機能：**
-
-- ステップ実行
-- ロケータピッカー
-- セレクタの編集と検証
-- マッチ要素数の表示
-
-### ブラウザコンソール
-
-```javascript
-// DevToolsコンソールで使用
-playwright.$('selector')        // 最初のマッチをハイライト
-playwright.$$('selector')       // すべてのマッチをハイライト
-```
-
-### トレースビューア
-
-```bash
-# トレースを記録
-npx playwright test --trace on
-
-# トレースを表示
-npx playwright show-trace trace.zip
-```
-
-## 📋 よく使うパターン
-
-### Page Object Model
-
-```javascript
-class LoginPage {
-  constructor(page) {
-    this.page = page;
-    this.usernameInput = page.getByLabel('ユーザー名');
-    this.passwordInput = page.getByLabel('パスワード');
-    this.submitButton = page.getByRole('button', { name: 'ログイン' });
-  }
-
-  async login(username, password) {
-    await this.usernameInput.fill(username);
-    await this.passwordInput.fill(password);
-    await this.submitButton.click();
-  }
-}
-```
-
-### リストフィルタリング
-
-```javascript
-// 動的リストから特定アイテムを見つける
-await page
-  .getByRole('listitem')
-  .filter({ hasText: '商品2' })
-  .getByRole('button', { name: 'カートに追加' })
-  .click();
-```
-
-### フォーム入力パターン
-
-```javascript
-// 並列入力（高速）
+// または並列処理で高速化
 await Promise.all([
   page.getByLabel('名').fill('太郎'),
   page.getByLabel('姓').fill('山田'),
-  page.getByLabel('メール').fill('taro@example.com')
+  page.getByLabel('メールアドレス').fill('taro@example.com')
 ]);
 ```
 
 ### テーブル操作
 
-```javascript
-// 特定の行を見つける
-const row = page
-  .getByRole('row')
-  .filter({ hasText: '山田太郎' });
+```html
+<!-- HTML -->
+<table>
+  <thead>
+    <tr>
+      <th>名前</th>
+      <th>メール</th>
+      <th>ステータス</th>
+      <th>アクション</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>山田太郎</td>
+      <td>yamada@example.com</td>
+      <td>アクティブ</td>
+      <td>
+        <button class="edit-btn">編集</button>
+        <button class="delete-btn">削除</button>
+      </td>
+    </tr>
+    <tr>
+      <td>鈴木花子</td>
+      <td>suzuki@example.com</td>
+      <td>非アクティブ</td>
+      <td>
+        <button class="edit-btn">編集</button>
+        <button class="delete-btn">削除</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+```
 
-// 行内のボタンをクリック
+```javascript
+// Playwright - テーブル操作
+// 特定の行を見つけて操作
+const row = page.getByRole('row').filter({ hasText: '山田太郎' });
 await row.getByRole('button', { name: '編集' }).click();
+
+// ステータスでフィルタ
+const activeRows = page.getByRole('row').filter({ hasText: 'アクティブ' });
+await expect(activeRows).toHaveCount(1);
+
+// 特定のセルの値を取得
+const email = await row.getByRole('cell').nth(1).textContent();
 ```
 
-## ❌ アンチパターン（避けるべき）
+### モーダル/ダイアログ操作
+
+```html
+<!-- HTML -->
+<div class="modal" role="dialog" style="display: none;">
+  <div class="modal-content">
+    <h2>確認</h2>
+    <p>本当に削除しますか？</p>
+    <button class="confirm">はい</button>
+    <button class="cancel">キャンセル</button>
+  </div>
+</div>
+
+<!-- 表示されたモーダル -->
+<div class="modal" role="dialog" style="display: block;">
+  <div class="modal-content">
+    <h2>確認</h2>
+    <p>本当に削除しますか？</p>
+    <button class="confirm">はい</button>
+    <button class="cancel">キャンセル</button>
+  </div>
+</div>
+```
 
 ```javascript
-// ❌ 長いCSS/XPathチェーン
-await page.locator('#tsf > div:nth-child(2) > div.A8SBwf').click();
+// Playwright - モーダル操作
+// 表示されているモーダルのみを対象
+await page.locator('.modal:visible').getByRole('button', { name: 'はい' }).click();
 
-// ✅ セマンティックまたはテストID
-await page.getByRole('searchbox').click();
+// またはrole属性を使用
+await page.getByRole('dialog').getByRole('button', { name: 'はい' }).click();
+```
 
-// ❌ CSSクラスへの依存
-await page.locator('.btn-primary-lg-rounded').click();
+### 動的コンテンツの処理
 
-// ✅ ロールまたはテストID
-await page.getByRole('button', { name: '送信' }).click();
+```html
+<!-- HTML - ローディング中 -->
+<div class="search-results">
+  <div class="loader">検索中...</div>
+</div>
 
-// ❌ コンテキストなしの位置指定
-await page.locator('button').nth(3).click();
+<!-- HTML - 結果表示後 -->
+<div class="search-results">
+  <ul>
+    <li>結果1</li>
+    <li>結果2</li>
+    <li>結果3</li>
+  </ul>
+</div>
+```
 
-// ✅ 具体的に指定
+```javascript
+// Playwright - 動的コンテンツを待つ
+// ローダーが消えるのを待つ
+await page.locator('.loader').waitFor({ state: 'hidden' });
+
+// 結果が表示されるのを待つ
+await page.locator('.search-results li').first().waitFor();
+
+// 結果をクリック
+await page.locator('.search-results li').first().click();
+```
+
+## ⚠️ Strictモード対応例
+
+```html
+<!-- HTML - 複数の同じボタン -->
+<div class="card">
+  <h3>商品A</h3>
+  <button>詳細</button>
+  <button>購入</button>
+</div>
+
+<div class="card">
+  <h3>商品B</h3>
+  <button>詳細</button>
+  <button>購入</button>
+</div>
+```
+
+```javascript
+// ❌ エラー：複数マッチ
+await page.locator('button').click(); // 4つのボタンがマッチ
+
+// ✅ 解決策1：コンテキストを追加
 await page
-  .getByRole('listitem')
-  .filter({ hasText: '利用可能' })
-  .getByRole('button')
-  .first()
+  .locator('.card')
+  .filter({ hasText: '商品A' })
+  .getByRole('button', { name: '購入' })
   .click();
+
+// ✅ 解決策2：より具体的なセレクタ
+await page.locator('.card:has-text("商品B") button:text("詳細")').click();
+
+// ✅ 解決策3：nth-matchを使用（位置が固定の場合）
+await page.locator(':nth-match(button:text("購入"), 2)').click();
 ```
 
-## 🚀 パフォーマンス最適化
+## 📊 Shadow DOMとiframe
 
-### セレクタ速度ランキング
+### Shadow DOM
 
-**階層1：超高速（<1ms）**
-
-- `getByTestId()` - 直接属性参照
-- CSS IDセレクタ（`#id`）
-- CSS属性セレクタ（`[data-testid="value"]`）
-
-**階層2：高速（1-5ms）**
-
-- `getByRole()` - アクセシビリティツリー
-- CSSクラスセレクタ（`.class`）
-
-**階層3：中速（5-20ms）**
-
-- `getByText()` - テキストマッチング
-- CSS子孫セレクタ（`div button`）
-
-**階層4：低速（20-100ms）**
-
-- XPathセレクタ - 完全DOM走査
-- レイアウトセレクタ（`:near()`、`:above()`など）
-
-### 最適化のテクニック
+```html
+<!-- HTML -->
+<div id="shadow-host"></div>
+<script>
+  const host = document.getElementById('shadow-host');
+  const shadow = host.attachShadow({ mode: 'open' });
+  shadow.innerHTML = `
+    <div class="shadow-content">
+      <button>Shadow内のボタン</button>
+    </div>
+  `;
+</script>
+```
 
 ```javascript
-// ✅ 良い例：高速で具体的
-await page.getByTestId('submit').click();
-
-// ✅ ロケータをキャッシュ
-const submitButton = page.getByRole('button', { name: '送信' });
-await submitButton.waitFor();
-await submitButton.click();
-
-// ✅ 検索範囲を絞る
-await page.locator('#search-results').getByText('アイテム').click();
-
-// ❌ 避ける：XPath
-// await page.locator('//div[contains(text(),"クリック")]').click();
+// Playwright - Shadow DOMを自動的に貫通
+await page.locator('#shadow-host button').click();
+await page.locator('.shadow-content button').click();
 ```
 
-## 📊 設定とセットアップ
+### iframe処理
+
+```html
+<!-- HTML -->
+<iframe id="my-frame" src="frame.html"></iframe>
+
+<!-- frame.html の内容 -->
+<html>
+  <body>
+    <button>iframe内のボタン</button>
+  </body>
+</html>
+```
 
 ```javascript
-// playwright.config.ts
-export default defineConfig({
-  use: {
-    // カスタムテストID属性
-    testIdAttribute: 'data-pw',
-    
-    // タイムアウト設定
-    actionTimeout: 10000,
-    navigationTimeout: 30000,
-  },
-});
+// Playwright - iframe内の要素を操作
+const frame = page.frameLocator('#my-frame');
+await frame.locator('button').click();
+
+// または
+await page.frameLocator('#my-frame').getByRole('button').click();
 ```
 
-## ✅ ベストプラクティスまとめ
+## ✅ Page Object Modelの実装例
 
-1. **ユーザー視点優先**: ロール、ラベル、プレースホルダ、テキスト
-1. **安定性のためのテストID**: セマンティック属性が不十分な場合
-1. **シンプルなCSS**: 必要な場合のみ
-1. **避けるべき**: CSSクラス、XPath、長いチェーン、位置指定
+```html
+<!-- HTML - ログインページ -->
+<div class="login-page">
+  <h1>ログイン</h1>
+  <form>
+    <div class="error-message" style="display: none;">
+      ログインに失敗しました
+    </div>
+    <input type="email" id="email" placeholder="メールアドレス" />
+    <input type="password" id="password" placeholder="パスワード" />
+    <button type="submit">ログイン</button>
+  </form>
+</div>
+```
 
-**覚えておくべきポイント:**
+```javascript
+// Playwright - Page Object Model
+class LoginPage {
+  constructor(page) {
+    this.page = page;
+    this.emailInput = page.locator('#email');
+    this.passwordInput = page.locator('#password');
+    this.submitButton = page.getByRole('button', { name: 'ログイン' });
+    this.errorMessage = page.locator('.error-message');
+  }
 
-- strictモードを活用して品質向上
-- ユーザーの視点でセレクタを選択
-- リファクタリングに強いセレクタを書く
-- パフォーマンスと保守性のバランスを取る
+  async login(email, password) {
+    await this.emailInput.fill(email);
+    await this.passwordInput.fill(password);
+    await this.submitButton.click();
+  }
+
+  async isErrorVisible() {
+    return await this.errorMessage.isVisible();
+  }
+}
+
+// テストでの使用
+const loginPage = new LoginPage(page);
+await loginPage.login('test@example.com', 'password123');
+if (await loginPage.isErrorVisible()) {
+  console.log('ログインエラーが表示されました');
+}
+```
+
+このガイドで、HTMLとPlaywrightセレクタの対応関係が明確になったと思います。実際のHTML構造を見ながら、適切なセレクタを選択できるようになっています。
